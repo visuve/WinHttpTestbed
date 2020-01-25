@@ -233,50 +233,183 @@ namespace Http
 
 		return response;
 	}
+
+	std::string Post(const Url& url, const std::string& data)
+	{
+		HttpHandle session, connection, request;
+
+		session = WinHttpOpen(
+			L"WinHTTP Testbed/1.0",
+			WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+			WINHTTP_NO_PROXY_NAME,
+			WINHTTP_NO_PROXY_BYPASS,
+			0);
+
+		if (!session.IsValid())
+		{
+			std::cerr << "WinHttpOpen failed with: " << GetLastError() << std::endl;
+			return {};
+		}
+
+		connection = WinHttpConnect(
+			session,
+			url.Host.c_str(),
+			INTERNET_DEFAULT_HTTPS_PORT,
+			0);
+
+		if (!connection.IsValid())
+		{
+			std::cerr << "WinHttpConnect failed with: " << GetLastError() << std::endl;
+			return {};
+		}
+
+		request = WinHttpOpenRequest(
+			connection,
+			L"POST",
+			url.Path.c_str(),
+			nullptr,
+			WINHTTP_NO_REFERER,
+			WINHTTP_DEFAULT_ACCEPT_TYPES,
+			WINHTTP_FLAG_SECURE);
+
+		if (!request.IsValid())
+		{
+			std::cerr << "WinHttpOpenRequest failed with: " << GetLastError() << std::endl;
+			return {};
+		}
+
+		constexpr wchar_t headers[] = L"Content-Type: text/html; charset=UTF-8\r\n";
+
+		if (!WinHttpSendRequest(
+			request,
+			headers,
+			static_cast<DWORD>(-1),
+			const_cast<char*>(data.c_str()),
+			static_cast<DWORD>(data.size()),
+			static_cast<DWORD>(data.size()),
+			0))
+		{
+			std::cerr << "WinHttpSendRequest failed with: " << GetLastError() << std::endl;
+			return {};
+		}
+
+		if (!WinHttpReceiveResponse(request, nullptr))
+		{
+			std::cerr << "WinHttpReceiveResponse failed with: " << GetLastError() << std::endl;
+			return {};
+		}
+
+		DWORD bufferSize = 0;
+		DWORD bytesRead = 0;
+		DWORD bytesTotal = 0;
+		std::string response;
+
+		do
+		{
+			bufferSize = 0;
+
+			if (!WinHttpQueryDataAvailable(request, &bufferSize))
+			{
+				std::cerr << "WinHttpQueryDataAvailable failed with: " << GetLastError() << std::endl;
+				break;
+			}
+
+			if (!bufferSize)
+			{
+				break;
+			}
+
+			std::string buffer(bufferSize, '\0');
+
+			if (!WinHttpReadData(request, &buffer.front(), bufferSize, &bytesRead))
+			{
+				std::cerr << "WinHttpReadData failed with: " << GetLastError() << std::endl;
+				break;
+			}
+
+			if (bufferSize != bytesRead)
+			{
+				buffer.resize(bytesRead);
+			}
+
+			bytesTotal += bytesRead;
+			response.append(buffer); // Suboptimal to have two buffers, don't care for now...
+
+		} while (bufferSize > 0);
+
+		return response;
+	}
 }
 
-int wmain(int argc, wchar_t* argv[])
+void Usage(const std::wstring& exe)
 {
-	if (argc < 2 || argc > 3)
+	std::wcerr << L"Usage:" << std::endl;
+	std::wcerr << exe << L" GET <url> <path-to-save-output>" << std::endl;
+	std::wcerr << L"OR" << std::endl;
+	std::wcerr << exe << L" POST <url> <path-to-post-contents>" << std::endl;
+}
+
+int wmain(int argc, const wchar_t* argv[])
+{
+	if (argc != 4)
 	{
-		std::cerr << "Usage <url> <path-to-save-output (optional)>" << std::endl;
+		Usage(argv[0]);
 		return ERROR_BAD_ARGUMENTS;
 	}
 
+	const Timing::Timer t;
+
+	try
 	{
-		const Timing::Timer t;
+		const Http::Url url(argv[2]);
+		std::filesystem::path path(argv[3]);
 
-		const Http::Url url(argv[1]);
-		std::wcout << url << std::endl;
-
-		const std::string content = Http::Get(url);
-
-		if (content.empty())
+		if (!path.has_parent_path())
 		{
-			return ERROR_NO_DATA;
+			// Override current working directory
+			path = std::filesystem::path(argv[0]).parent_path() / path;
 		}
 
-		if (argc != 3)
+		if (_wcsicmp(argv[1], L"GET") == 0)
 		{
-			std::cout << content << std::endl;
-		}
-		else
-		{
-			std::filesystem::path path(argv[2]);
-
-			if (!path.has_parent_path())
-			{
-				// Override current working directory
-				path = std::filesystem::path(argv[0]).parent_path() / path;
-			}
+			const std::string response = Http::Get(url);
 
 			std::ofstream file(path, std::ios::binary | std::ios::trunc);
 
-			if (file && file << content)
+			if (file && file << response)
 			{
 				std::cout << "Saved: " << path << std::endl;
 			}
 		}
+		else if (_wcsicmp(argv[1], L"POST") == 0)
+		{
+			std::ifstream file(path, std::ios::binary);
+
+			if (!file)
+			{
+				return ERROR_FILE_NOT_FOUND;
+			}
+
+			const std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+			
+			const std::string response = Http::Post(url, data);
+
+			if (!response.empty())
+			{
+				std::cout << "Got response: " << response;
+			}
+		}
+		else
+		{
+			Usage(argv[0]);
+			return ERROR_BAD_ARGUMENTS;
+		}
+
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "An exception occurred: " << e.what() << std::endl;
+
 	}
 
 	return ERROR_SUCCESS;
