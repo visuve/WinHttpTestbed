@@ -24,7 +24,12 @@ namespace Http
 
 		HttpHandle& operator = (HINTERNET handle)
 		{
-			Exchange(handle);
+			if (m_handle != handle)
+			{
+				Close();
+				m_handle = handle;
+			}
+
 			return *this;
 		}
 
@@ -42,30 +47,13 @@ namespace Http
 			}
 		}
 
-		void Exchange(HINTERNET handle)
-		{
-			if (m_handle != handle)
-			{
-				Close();
-				m_handle = handle;
-			}
-		}
-
 		HINTERNET m_handle = nullptr;
 	};
 
 	namespace Regex
 	{
-		// Derived from: https://stackoverflow.com/questions/2616011/easy-way-to-parse-a-url-in-c-cross-platform answer from Mr. Jones
-		constexpr wchar_t Scheme[] = L"((http[s]?)://)?";  // match http or https before the ://
-		constexpr wchar_t User[] = L"(([^@/:\\s]+)@)?";  // match anything other than @ / : or whitespace before the ending @
-		constexpr wchar_t Host[] = L"([^@/:\\s]+)";      // mandatory. match anything other than @ / : or whitespace
-		constexpr wchar_t Port[] = L"(:([0-9]{1,5}))?";  // after the : match 1 to 5 digits
-		constexpr wchar_t Path[] = L"(/[^:#?\\s]*)?";    // after the / match anything other than : # ? or whitespace
-		constexpr wchar_t Query[] = L"(\\?(([^?;&#=]+=[^?;&#=]+)([;|&]([^?;&#=]+=[^?;&#=]+))*))?"; // after the ? match any number of x=y pairs, seperated by & or ;
-		constexpr wchar_t Fragment[] = L"(#([^#\\s]*))?";    // after the # match anything other than # or whitespace
-
-		const std::wregex UrlRegex(std::wstring(L"^") + Scheme + User + Host + Port + Path + Query + Fragment + L"$");
+		// Derived from: https://stackoverflow.com/questions/2616011/easy-way-to-parse-a-url-in-c-cross-platform answer from Fabiano Tarlao
+		const std::wregex UrlRegex(L"(http|https):\\/\\/(?:([^@ ]*)@)?([^:?# ]+)(?::(\\d+))?([^?# ]*)(?:\\?([^# ]*))?(?:#([^ ]*))?");
 	}
 
 	class Url
@@ -87,15 +75,22 @@ namespace Http
 
 			if (std::regex_match(url.c_str(), result, Regex::UrlRegex))
 			{
-				Scheme.assign(result[2].first, result[2].second);
-				User.assign(result[4].first, result[4].second);
-				Host.assign(result[5].first, result[5].second);
-				Port.assign(result[7].first, result[7].second);
-				Path.assign(result[8].first, result[8].second);
-				Query.assign(result[10].first, result[10].second);
-				Fragment.assign(result[15].first, result[15].second);
+				Scheme.assign(result[1].first, result[1].second);
+				User.assign(result[2].first, result[2].second);
+				Host.assign(result[3].first, result[3].second);
+				Port.assign(result[4].first, result[4].second);
+				Path.assign(result[5].first, result[5].second);
+				Query.assign(result[6].first, result[6].second);
+				Fragment.assign(result[7].first, result[7].second);
 			}
 			else
+			{
+				throw std::invalid_argument("Failed to parse URL");
+			}
+
+			const std::wstring parsed(*this);
+
+			if (url != parsed)
 			{
 				throw std::invalid_argument("Failed to parse URL");
 			}
@@ -111,24 +106,51 @@ namespace Http
 			Url(std::wstring(uri, N))
 		{
 		}
+
+		operator std::wstring() const
+		{
+			std::wstring url;
+
+			if (!Scheme.empty())
+			{
+				url.append(Scheme);
+				url.append(L"://");
+			}
+
+			if (!User.empty())
+			{
+				url.append(User);
+				url.push_back(L'@');
+			}
+
+			url.append(Host);
+
+			if (!Port.empty())
+			{
+				url.push_back(L':');
+				url.append(Port);
+			}
+
+			if (!Path.empty())
+			{
+				url.append(Path);
+			}
+
+			if (!Query.empty())
+			{
+				url.push_back(L'?');
+				url.append(Query);
+			}
+
+			if (!Fragment.empty())
+			{
+				url.push_back(L'#');
+				url.append(Fragment);
+			}
+
+			return url;
+		}
 	};
-
-	std::wostream& operator << (std::wostream& os, const Url& uri)
-	{
-		if (!uri.Scheme.empty())
-		{
-			os << uri.Scheme << "://";
-		}
-
-		os << uri.Host;
-
-		if (!uri.Path.empty())
-		{
-			os << uri.Path;
-		}
-
-		return os;
-	}
 
 	std::string Get(const Url& url)
 	{
