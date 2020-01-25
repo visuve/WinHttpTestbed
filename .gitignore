@@ -1,0 +1,6 @@
+out/
+.vs/
+*.opendb
+*.db
+*.user
+*.aps
