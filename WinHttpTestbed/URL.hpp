@@ -6,7 +6,7 @@ namespace Http
 	{
 	public:
 		std::wstring Scheme;
-		std::wstring User;
+		// std::wstring User;
 		std::wstring Host;
 		std::wstring Port;
 		std::wstring Path;
