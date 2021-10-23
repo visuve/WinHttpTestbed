@@ -35,12 +35,7 @@ int wmain(int argc, const wchar_t* argv[])
 		if (_wcsicmp(argv[1], L"GET") == 0)
 		{
 			Http::GetRequest request(url);
-
-			if (!request.Execute())
-			{
-				std::cerr << "Failed to execute get request" << std::endl;
-				return ERROR_READ_FAULT;
-			}
+			request.Execute();
 				
 			std::string response = request.Response();
 
@@ -69,12 +64,7 @@ int wmain(int argc, const wchar_t* argv[])
 			const std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 			Http::PostRequest request(url, data);
-
-			if (!request.Execute())
-			{
-				std::cerr << "Failed to execute post request" << std::endl;
-				return ERROR_WRITE_FAULT;
-			}
+			request.Execute();
 
 			std::string response = request.Response();
 
@@ -85,7 +75,7 @@ int wmain(int argc, const wchar_t* argv[])
 			}
 			else
 			{
-				std::cout << "Got response:" << response << std::endl;
+				std::cout << "Got response: " << response << std::endl;
 			}
 		}
 		else
@@ -94,9 +84,16 @@ int wmain(int argc, const wchar_t* argv[])
 			return ERROR_BAD_ARGUMENTS;
 		}
 	}
+	catch (const std::system_error& e)
+	{
+		std::cerr << "Failed to call " << e.what()
+			<< " Error code: " << e.code().value() << std::endl;
+		return e.code().value();
+	}
 	catch (const std::exception & e)
 	{
 		std::cerr << "An exception occurred: " << e.what() << std::endl;
+		return EVENT_E_INTERNALEXCEPTION;
 	}
 
 	return ERROR_SUCCESS;

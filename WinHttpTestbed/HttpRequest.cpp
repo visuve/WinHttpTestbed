@@ -3,6 +3,11 @@
 
 namespace Http
 {
+	inline void ThrowSystemError(const std::string& function)
+	{
+		throw std::system_error(GetLastError(), std::system_category(), function);
+	}
+
 	Request::Request(const Url& url, std::wstring_view method)
 	{
 		_session = WinHttpOpen(
@@ -14,8 +19,7 @@ namespace Http
 
 		if (!_session)
 		{
-			std::cerr << "WinHttpOpen failed with: " << GetLastError() << std::endl;
-			return;
+			ThrowSystemError("WinHttpOpen");
 		}
 
 		_connection = WinHttpConnect(
@@ -26,8 +30,7 @@ namespace Http
 
 		if (!_connection)
 		{
-			std::cerr << "WinHttpConnect failed with: " << GetLastError() << std::endl;
-			return;
+			ThrowSystemError("WinHttpConnect");
 		}
 
 		_request = WinHttpOpenRequest(
@@ -41,8 +44,7 @@ namespace Http
 
 		if (!_request)
 		{
-			std::cerr << "WinHttpOpenRequest failed with: " << GetLastError() << std::endl;
-			return;
+			ThrowSystemError("WinHttpOpenRequest");
 		}
 	}
 
@@ -68,8 +70,7 @@ namespace Http
 	{
 		if (!WinHttpReceiveResponse(_request, nullptr))
 		{
-			std::cerr << "WinHttpReceiveResponse failed with: " << GetLastError() << std::endl;
-			return {};
+			ThrowSystemError("WinHttpReceiveResponse");
 		}
 
 		DWORD bufferSize = 0;
@@ -83,8 +84,7 @@ namespace Http
 
 			if (!WinHttpQueryDataAvailable(_request, &bufferSize))
 			{
-				std::cerr << "WinHttpQueryDataAvailable failed with: " << GetLastError() << std::endl;
-				break;
+				ThrowSystemError("WinHttpQueryDataAvailable");
 			}
 
 			if (!bufferSize)
@@ -96,8 +96,7 @@ namespace Http
 
 			if (!WinHttpReadData(_request, &buffer.front(), bufferSize, &bytesRead))
 			{
-				std::cerr << "WinHttpReadData failed with: " << GetLastError() << std::endl;
-				break;
+				ThrowSystemError("WinHttpReadData");
 			}
 
 			if (bufferSize != bytesRead)
@@ -118,7 +117,7 @@ namespace Http
 	{
 	}
 
-	bool GetRequest::Execute() const
+	void GetRequest::Execute() const
 	{
 		if (!WinHttpSendRequest(
 			_request,
@@ -129,11 +128,8 @@ namespace Http
 			0,
 			0))
 		{
-			std::cerr << "WinHttpSendRequest failed with: " << GetLastError() << std::endl;
-			return false;
+			ThrowSystemError("WinHttpSendRequest");
 		}
-
-		return true;
 	}
 
 	PostRequest::PostRequest(const Url& url, std::string_view payload) :
@@ -142,7 +138,7 @@ namespace Http
 	{
 	}
 
-	bool PostRequest::Execute() const
+	void PostRequest::Execute() const
 	{
 		wchar_t headers[] = L"Content-Type: text/html; charset=UTF-8";
 		DWORD headerLength = static_cast<DWORD>(std::size(headers));
@@ -157,10 +153,7 @@ namespace Http
 			payloadSize,
 			0))
 		{
-			std::cerr << "WinHttpSendRequest failed with: " << GetLastError() << std::endl;
-			return false;
+			ThrowSystemError("WinHttpSendRequest");
 		}
-
-		return true;
 	}
 }
