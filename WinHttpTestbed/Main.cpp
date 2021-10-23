@@ -35,7 +35,21 @@ int wmain(int argc, const wchar_t* argv[])
 
 		if (_wcsicmp(argv[1], L"GET") == 0)
 		{
-			const std::string response = Http::Get(url);
+			Http::GetRequest request(url);
+
+			if (!request.Execute())
+			{
+				std::cerr << "Failed to execute get request" << std::endl;
+				return ERROR_READ_FAULT;
+			}
+				
+			std::string response = request.Response();
+
+			if (response.empty())
+			{
+				std::cerr << "Got no reponse" << std::endl;
+				return WSANO_DATA;
+			}
 
 			std::ofstream file(path, std::ios::binary | std::ios::trunc);
 
@@ -55,11 +69,24 @@ int wmain(int argc, const wchar_t* argv[])
 
 			const std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-			const std::string response = Http::Post(url, data);
+			Http::PostRequest request(url, data);
 
-			if (!response.empty())
+			if (!request.Execute())
 			{
-				std::cout << "Got response: " << response;
+				std::cerr << "Failed to execute post request" << std::endl;
+				return ERROR_WRITE_FAULT;
+			}
+
+			std::string response = request.Response();
+
+			if (response.empty())
+			{
+				std::cerr << "Got no response" << std::endl;
+				return WSANO_DATA;
+			}
+			else
+			{
+				std::cout << "Got response: " << response;	
 			}
 		}
 		else
