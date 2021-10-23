@@ -35,7 +35,7 @@ int wmain(int argc, const wchar_t* argv[])
 
 		if (_wcsicmp(argv[1], L"GET") == 0)
 		{
-			const std::string response = Http::Request::Get(url);
+			const std::string response = Http::Get(url);
 
 			std::ofstream file(path, std::ios::binary | std::ios::trunc);
 
@@ -55,7 +55,7 @@ int wmain(int argc, const wchar_t* argv[])
 
 			const std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-			const std::string response = Http::Request::Post(url, data);
+			const std::string response = Http::Post(url, data);
 
 			if (!response.empty())
 			{

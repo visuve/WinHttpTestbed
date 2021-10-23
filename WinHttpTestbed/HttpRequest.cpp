@@ -4,7 +4,7 @@
 
 namespace Http
 {
-	std::string Request::Get(const Url& url)
+	std::string Get(const Url& url)
 	{
 		Handle session, connection, request;
 
@@ -107,9 +107,9 @@ namespace Http
 		return response;
 	}
 
-	std::string Http::Request::Post(const Url& url, const std::string& data)
+	std::string Http::Post(const Url& url, const std::string& data)
 	{
-		Http::Handle session, connection, request;
+		Handle session, connection, request;
 
 		session = WinHttpOpen(
 			L"WinHTTP Testbed/1.0",
@@ -156,7 +156,7 @@ namespace Http
 		if (!WinHttpSendRequest(
 			request,
 			headers,
-			static_cast<DWORD>(-1),
+			static_cast<DWORD>(std::size(headers)),
 			const_cast<char*>(data.c_str()),
 			static_cast<DWORD>(data.size()),
 			static_cast<DWORD>(data.size()),
@@ -207,7 +207,8 @@ namespace Http
 
 			bytesTotal += bytesRead;
 			response.append(buffer); // Suboptimal to have two buffers, don't care for now...
-		} while (bufferSize > 0);
+		}
+		while (bufferSize > 0);
 
 		return response;
 	}

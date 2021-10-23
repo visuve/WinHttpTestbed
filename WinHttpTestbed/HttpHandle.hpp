@@ -1,7 +1,5 @@
 #pragma once
 
-#include <winhttp.h>
-
 namespace Http
 {
 	class Handle
@@ -18,6 +16,6 @@ namespace Http
 	private:
 		void Close();
 
-		HINTERNET m_handle = nullptr;
+		HINTERNET _handle = nullptr;
 	};
 }

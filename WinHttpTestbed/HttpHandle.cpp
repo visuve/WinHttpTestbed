@@ -4,7 +4,7 @@
 namespace Http
 {
 	Handle::Handle(HINTERNET handle) :
-		m_handle(handle)
+		_handle(handle)
 	{
 	}
 
@@ -15,15 +15,15 @@ namespace Http
 
 	bool Handle::IsValid() const
 	{
-		return m_handle != nullptr;
+		return _handle != nullptr;
 	}
 
 	Handle& Handle::operator = (HINTERNET handle)
 	{
-		if (m_handle != handle)
+		if (_handle != handle)
 		{
 			Close();
-			m_handle = handle;
+			_handle = handle;
 		}
 
 		return *this;
@@ -31,14 +31,14 @@ namespace Http
 
 	Handle::operator HINTERNET() const
 	{
-		return m_handle;
+		return _handle;
 	}
 
 	void Handle::Close()
 	{
-		if (m_handle)
+		if (_handle)
 		{
-			WinHttpCloseHandle(m_handle);
+			WinHttpCloseHandle(_handle);
 		}
 	}
 }

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <chrono>
-#include <iostream>
-
 namespace Timing
 {
 	using Days = std::chrono::duration<uint64_t, std::ratio<86400, 1>>;
@@ -38,6 +35,6 @@ namespace Timing
 		Duration Elapsed() const;
 		~Timer();
 	private:
-		const std::chrono::high_resolution_clock::time_point m_start = std::chrono::high_resolution_clock::now();
+		const std::chrono::high_resolution_clock::time_point _start = std::chrono::high_resolution_clock::now();
 	};
 }

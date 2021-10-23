@@ -22,7 +22,7 @@ namespace Timing
 
 	MicroSeconds Timer::ElapsedMicroSeconds() const
 	{
-		const auto diff = std::chrono::high_resolution_clock::now() - m_start;
+		const auto diff = std::chrono::high_resolution_clock::now() - _start;
 		return std::chrono::duration_cast<MicroSeconds>(diff);
 	}
 
