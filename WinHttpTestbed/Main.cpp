@@ -1,7 +1,6 @@
 #include "PCH.hpp"
 #include "Timing.hpp"
 #include "URL.hpp"
-#include "HttpHandle.hpp"
 #include "HttpRequest.hpp"
 
 void Usage(const std::wstring& exe)
@@ -55,7 +54,7 @@ int wmain(int argc, const wchar_t* argv[])
 
 			if (file && file << response)
 			{
-				std::cout << "Saved: " << path << std::endl;
+				std::cout << "Saved response in: " << path << std::endl;
 			}
 		}
 		else if (_wcsicmp(argv[1], L"POST") == 0)
@@ -86,7 +85,7 @@ int wmain(int argc, const wchar_t* argv[])
 			}
 			else
 			{
-				std::cout << "Got response: " << response;	
+				std::cout << "Got response:" << response << std::endl;
 			}
 		}
 		else

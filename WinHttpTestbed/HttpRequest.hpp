@@ -1,6 +1,5 @@
 #pragma once
 
-#include "HttpHandle.hpp"
 #include "URL.hpp"
 
 namespace Http
@@ -9,12 +8,13 @@ namespace Http
 	{
 	public:
 		Request(const Url& url, std::wstring_view method);
+		virtual ~Request();
 		virtual bool Execute() const = 0;
 		std::string Response() const;
 	protected:
-		Handle _session;
-		Handle _connection;
-		Handle _request;
+		HINTERNET _session = nullptr;
+		HINTERNET _connection = nullptr;
+		HINTERNET _request = nullptr;
 	};
 
 	class GetRequest : public Request

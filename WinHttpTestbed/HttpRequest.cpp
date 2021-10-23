@@ -1,6 +1,5 @@
 #include "PCH.hpp"
 #include "HttpRequest.hpp"
-#include "HttpHandle.hpp"
 
 namespace Http
 {
@@ -13,7 +12,7 @@ namespace Http
 			WINHTTP_NO_PROXY_BYPASS,
 			0);
 
-		if (!_session.IsValid())
+		if (!_session)
 		{
 			std::cerr << "WinHttpOpen failed with: " << GetLastError() << std::endl;
 			return;
@@ -25,7 +24,7 @@ namespace Http
 			INTERNET_DEFAULT_HTTPS_PORT,
 			0);
 
-		if (!_connection.IsValid())
+		if (!_connection)
 		{
 			std::cerr << "WinHttpConnect failed with: " << GetLastError() << std::endl;
 			return;
@@ -40,10 +39,28 @@ namespace Http
 			WINHTTP_DEFAULT_ACCEPT_TYPES,
 			WINHTTP_FLAG_SECURE);
 
-		if (!_request.IsValid())
+		if (!_request)
 		{
 			std::cerr << "WinHttpOpenRequest failed with: " << GetLastError() << std::endl;
 			return;
+		}
+	}
+
+	Request::~Request()
+	{
+		if (_request)
+		{
+			WinHttpCloseHandle(_request);
+		}
+
+		if (_connection)
+		{
+			WinHttpCloseHandle(_connection);
+		}
+
+		if (_session)
+		{
+			WinHttpCloseHandle(_session);
 		}
 	}
 
@@ -103,11 +120,6 @@ namespace Http
 
 	bool GetRequest::Execute() const
 	{
-		if (!_request.IsValid())
-		{
-			return false;
-		}
-
 		if (!WinHttpSendRequest(
 			_request,
 			WINHTTP_NO_ADDITIONAL_HEADERS,
@@ -132,11 +144,6 @@ namespace Http
 
 	bool PostRequest::Execute() const
 	{
-		if (!_request.IsValid())
-		{
-			return false;
-		}
-
 		wchar_t headers[] = L"Content-Type: text/html; charset=UTF-8";
 		DWORD headerLength = static_cast<DWORD>(std::size(headers));
 		DWORD payloadSize = static_cast<DWORD>(_payload.size());
